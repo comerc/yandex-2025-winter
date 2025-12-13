@@ -2,9 +2,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -24,7 +27,10 @@ func main() {
 		p[i], _ = strconv.Atoi(parts[i])
 	}
 
-	q := solve(n, p)
+	var q []int
+	checkLimits(2*time.Second, 256, func() {
+		q = solve(n, p)
+	})
 
 	// Выводим результат
 	for i, v := range q {
@@ -34,6 +40,52 @@ func main() {
 		writer.WriteString(strconv.Itoa(v))
 	}
 	writer.WriteByte('\n')
+}
+
+// checkLimits проверяет ограничения времени и памяти (работает только если установлена переменная окружения CHECK_LIMITS)
+// Результаты выводятся в stderr, функция ничего не возвращает
+func checkLimits(maxTime time.Duration, maxMemoryMB int, fn func()) {
+	// Проверяем переменную окружения
+	if os.Getenv("CHECK_LIMITS") == "" {
+		// Если переменная не установлена, просто выполняем функцию без проверок
+		fn()
+		return
+	}
+
+	// Измеряем память до выполнения
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Измеряем время выполнения
+	start := time.Now()
+	fn()
+	elapsed := time.Since(start)
+
+	// Измеряем память после выполнения
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	// Вычисляем использованную память
+	allocated := m2.TotalAlloc - m1.TotalAlloc
+	memoryMB := float64(allocated) / (1024 * 1024)
+	maxMemoryBytes := uint64(maxMemoryMB) * 1024 * 1024
+
+	// Проверяем ограничения
+	timeOk := elapsed <= maxTime
+	memoryOk := allocated <= maxMemoryBytes
+
+	// Логируем результаты
+	if !timeOk || !memoryOk {
+		if elapsed > maxTime {
+			fmt.Fprintf(os.Stderr, "⚠️ Превышено время: %v (лимит: %v)\n", elapsed, maxTime)
+		}
+		if memoryMB > float64(maxMemoryMB) {
+			fmt.Fprintf(os.Stderr, "⚠️ Превышена память: %.2f МБ (лимит: %d МБ)\n", memoryMB, maxMemoryMB)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "✓ Время: %v, Память: %.2f МБ\n", elapsed, memoryMB)
+	}
 }
 
 // solve находит ровную перестановку q, которая не совпадает с p ни в одной позиции
