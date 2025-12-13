@@ -102,3 +102,5 @@ fn query(prefix_sums: &[Vec<i32>], k: usize, l: usize, r: usize) -> i32 {
 
 
 
+
+
