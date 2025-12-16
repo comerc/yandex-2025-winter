@@ -1,26 +1,28 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-void main() {
-  // Читаем весь ввод сразу
-  final input = StringBuffer();
-  String? line;
-  while ((line = stdin.readLineSync()) != null) {
-    input.write(line);
-    input.write(' ');
+Future<void> main() async {
+  // Читаем весь ввод асинхронно через Stream с BytesBuilder
+  final bytesBuilder = BytesBuilder();
+  
+  // Читаем все данные из stdin через Stream
+  await for (final chunk in stdin) {
+    bytesBuilder.add(chunk);
   }
   
-  final inputStr = input.toString();
-  // Оцениваем размер: примерно по 10 символов на число + пробелы
+  final bytes = bytesBuilder.takeBytes();
+  
+  // Парсим числа напрямую из байтов без декодирования в строку
+  // Это намного быстрее для больших входных данных
   final tokens = <int>[];
+  
   var num = 0;
   var hasNum = false;
   
-  // Парсим все числа сразу
-  for (var i = 0; i < inputStr.length; i++) {
-    final code = inputStr.codeUnitAt(i);
-    if (code >= 48 && code <= 57) { // '0'..'9'
-      num = num * 10 + (code - 48);
+  for (var i = 0; i < bytes.length; i++) {
+    final byte = bytes[i];
+    if (byte >= 48 && byte <= 57) { // '0'..'9'
+      num = num * 10 + (byte - 48);
       hasNum = true;
     } else if (hasNum) {
       tokens.add(num);
@@ -32,9 +34,10 @@ void main() {
     tokens.add(num);
   }
   
-  // Используем List<int> напрямую - быстрее чем создавать Int32List
+  // Конвертируем в Int32List для экономии памяти
+  final tokensList = Int32List.fromList(tokens);
   var tokenIdx = 0;
-  int readInt() => tokens[tokenIdx++];
+  int readInt() => tokensList[tokenIdx++];
 
   final output = StringBuffer();
   final t = readInt();
