@@ -1,0 +1,11 @@
+5
+a
+b
+ba
+ab
+ab
+ba
+abc
+b
+abc
+abc
